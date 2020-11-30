@@ -1,5 +1,7 @@
 import { Parser } from "./parser";
 
+import fetch from 'node-fetch';
+
 export type RequirementFunction = ({
     opcode,
     operands,
@@ -8,7 +10,7 @@ export type RequirementFunction = ({
     opcode: string,
     operands: string[],
     parser: Parser
-}) => boolean
+}) => Promise<boolean> | boolean
 
 export type Requirement = ({
     fn: RequirementFunction,
@@ -23,7 +25,7 @@ export type ExecuteFunction = ({
     opcode: string,
     operands: string[],
     parser: Parser
-}) => string
+}) => Promise<string> | string
 
 export interface Expression {
     requirements?: Requirement[]
@@ -111,6 +113,21 @@ export const EXPRESSIONS = new Map<string, Expression>([
             execute: ({ operands, parser }) => {
                 parser.valueStore.set(operands[0], operands[1]);
                 return '';
+            }
+        }
+    ],
+    [
+        'text',
+        {
+            execute: async ({ operands, parser }) => {
+                let text;
+                try {
+                    text = fetch(operands[0]).then(x => x.text());
+                } catch(e) {
+                    parser.errors.push(e.message);
+                    return '';
+                }
+                return text;
             }
         }
     ]
